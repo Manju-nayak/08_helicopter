@@ -2,7 +2,7 @@
 GameEngine: owns the helicopter and all obstacles.
 
 Handles helicopter movement, obstacle scrolling, collision detection,
-and game-over state.
+game-over state, and distance scoring.
 """
 
 import random
@@ -23,6 +23,7 @@ class GameEngine:
         self.obstacles = []
         self.frames_until_spawn = 0
         self.game_over = False
+        self.distance = 0
 
     def _spawn_obstacle(self):
         margin = 60
@@ -52,11 +53,14 @@ class GameEngine:
         pass
 
     def update(self):
-        # Stop normal gameplay after Game Over
+        # Stop gameplay after Game Over
         if self.game_over:
             return
 
         self.helicopter.update(HEIGHT)
+
+        # Increase distance while playing
+        self.distance += SCROLL_SPEED
 
         self.frames_until_spawn -= 1
 
@@ -67,14 +71,14 @@ class GameEngine:
         for obstacle in self.obstacles:
             obstacle.update()
 
-            # Check collision with the top wall
+            # Check collision with top wall
             if self.helicopter.get_rect().colliderect(
                 obstacle.get_top_rect()
             ):
                 self.game_over = True
                 return
 
-            # Check collision with the bottom wall
+            # Check collision with bottom wall
             if self.helicopter.get_rect().colliderect(
                 obstacle.get_bottom_rect()
             ):
@@ -96,7 +100,19 @@ class GameEngine:
             self.obstacles
         )
 
-        # Display Game Over message
+        # Display distance
+        distance_text = font.render(
+            f"Distance: {self.distance}",
+            True,
+            (255, 255, 255)
+        )
+
+        surface.blit(
+            distance_text,
+            (10, 10)
+        )
+
+        # Display Game Over
         if self.game_over:
             game_over_text = font.render(
                 "GAME OVER",
@@ -108,4 +124,23 @@ class GameEngine:
                 center=(WIDTH // 2, HEIGHT // 2)
             )
 
-            surface.blit(game_over_text, text_rect)
+            surface.blit(
+                game_over_text,
+                text_rect
+            )
+
+            # Show final distance
+            final_distance_text = font.render(
+                f"Distance: {self.distance}",
+                True,
+                (255, 255, 255)
+            )
+
+            final_rect = final_distance_text.get_rect(
+                center=(WIDTH // 2, HEIGHT // 2 + 50)
+            )
+
+            surface.blit(
+                final_distance_text,
+                final_rect
+            )
