@@ -2,10 +2,11 @@
 GameEngine: owns the helicopter and all obstacles.
 
 Handles helicopter movement, obstacle scrolling, collision detection,
-game-over state, and distance scoring.
+game-over state, distance scoring, and shield mechanics.
 """
 
 import random
+import pygame
 
 from game.helicopter import Helicopter
 from game.obstacle import Obstacle
@@ -24,6 +25,7 @@ class GameEngine:
         self.frames_until_spawn = 0
         self.game_over = False
         self.distance = 0
+        self.shield_active = False
 
     def _spawn_obstacle(self):
         margin = 60
@@ -50,7 +52,12 @@ class GameEngine:
         self.helicopter.handle_input(keys_pressed)
 
     def handle_keydown(self, key):
-        pass
+        if self.game_over:
+            return
+
+        # Press S to activate the shield
+        if key == pygame.K_s:
+            self.shield_active = True
 
     def update(self):
         # Stop gameplay after Game Over
@@ -71,19 +78,22 @@ class GameEngine:
         for obstacle in self.obstacles:
             obstacle.update()
 
-            # Check collision with top wall
-            if self.helicopter.get_rect().colliderect(
-                obstacle.get_top_rect()
-            ):
-                self.game_over = True
-                return
+            helicopter_rect = self.helicopter.get_rect()
+            top_rect = obstacle.get_top_rect()
+            bottom_rect = obstacle.get_bottom_rect()
 
-            # Check collision with bottom wall
-            if self.helicopter.get_rect().colliderect(
-                obstacle.get_bottom_rect()
-            ):
-                self.game_over = True
-                return
+            collision = (
+                helicopter_rect.colliderect(top_rect)
+                or helicopter_rect.colliderect(bottom_rect)
+            )
+
+            if collision:
+                if self.shield_active:
+                    # Shield absorbs exactly one collision
+                    self.shield_active = False
+                else:
+                    self.game_over = True
+                    return
 
         self.obstacles = [
             obstacle
@@ -107,10 +117,32 @@ class GameEngine:
             (255, 255, 255)
         )
 
-        surface.blit(
-            distance_text,
-            (10, 10)
-        )
+        surface.blit(distance_text, (10, 10))
+
+        # Display shield status
+        if self.shield_active:
+            shield_text = font.render(
+                "SHIELD ACTIVE",
+                True,
+                (0, 255, 255)
+            )
+
+            surface.blit(
+                shield_text,
+                (10, 40)
+            )
+
+            # Draw a visible shield around the helicopter
+            pygame.draw.circle(
+                surface,
+                (0, 255, 255),
+                (
+                    int(self.helicopter.x),
+                    int(self.helicopter.y)
+                ),
+                28,
+                3
+            )
 
         # Display Game Over
         if self.game_over:
@@ -124,10 +156,7 @@ class GameEngine:
                 center=(WIDTH // 2, HEIGHT // 2)
             )
 
-            surface.blit(
-                game_over_text,
-                text_rect
-            )
+            surface.blit(game_over_text, text_rect)
 
             # Show final distance
             final_distance_text = font.render(
